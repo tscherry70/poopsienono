@@ -1,0 +1,29 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:paddingLeft="0dp"
+    android:paddingRight="0dp"
+    android:paddingTop="0dp"
+    android:paddingBottom="0dp" tools:context=".MainActivity">
+
+    <com.tsc.drawing.GameBoard
+        android:layout_width="fill_parent"
+        android:layout_height="238dp"
+        android:id="@+id/the_canvas"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentTop="true" />
+
+    <Button
+    android:id="@+id/the_button"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:enabled="false"
+    android:text="Reset"
+    android:layout_gravity="center_horizontal"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true" />
+
+</RelativeLayout>

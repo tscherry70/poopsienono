@@ -1,0 +1,27 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:paddingLeft="0dp"
+    android:paddingRight="0dp"
+    android:paddingTop="0dp"
+    android:paddingBottom="0dp" tools:context=".MainActivity"
+    android:weightSum="1">
+
+    <com.tsc.drawing.GameBoard
+        android:layout_width="fill_parent"
+        android:layout_height="250dp"
+        android:id="@+id/the_canvas"
+        android:layout_weight="1" />
+
+    <Button
+    android:id="@+id/the_button"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+        android:gravity="center"
+    android:enabled="false"
+    android:text="Reset"
+        android:layout_gravity="bottom|center_horizontal" />
+
+</LinearLayout>
