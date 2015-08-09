@@ -1,9 +1,5 @@
 package com.tsc.drawing;
 
-/**
- * Created by Todd Cherry on 7/29/2015.
- */
-
 import android.content.Context;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -11,6 +7,7 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -27,14 +24,25 @@ public class GameBoard extends View{
     private List<Point> starField = null;
     private int starAlpha = 80;
     private int starFade = 2;
+    private int MaxPoopSprites = 10;
     private static final int NUM_OF_STARS = 25;
-    public Sprite poop;
+    public List<Sprite> poops;
     public Sprite dude;
+
 
     synchronized public void resetStarField() {
         starField = null;
     }
 
+    private int getRandomXLocation(){
+        Random r = new Random();
+        int maxX = findViewById(R.id.the_canvas).getWidth();
+        return r.nextInt(maxX);
+    }
+    private int getRandomNum(int low, int high){
+        Random r = new Random();
+        return r.nextInt(high - low + 1) + low;
+    }
     private Point getRandomPoint() {
         Random r = new Random();
         int minX = 0;
@@ -58,10 +66,19 @@ public class GameBoard extends View{
 
         } while (Math.abs(p1.x - p2.x) < dude.getWidth());
 
-        dude.setXY(p1.x, p1.y);
-        poop.setXY(p2.x, p2.y);
+        dude.setXY(findViewById(R.id.the_canvas).getWidth() / 2,
+                findViewById(R.id.the_canvas).getHeight() - 50);
 
-        poop.genRandomVelocity();
+        int id = 0;
+        for(Sprite poop : poops){
+            poop.setXY(getRandomXLocation(), 0);
+            poop.genRandomVelocity();
+            poop.set_rotationSpeed(getRandomNum(1, 20));
+            poop.set_id(id++);
+        }
+
+        //poop.setXY(p2.x, p2.y);
+        //poop.genRandomVelocity();
         dude.set_velocity(new Point(1,1));
     }
 
@@ -71,8 +88,13 @@ public class GameBoard extends View{
         //initialize them as class variables here
         p = new Paint();
 
-        poop = new Sprite(-1,-1, BitmapFactory.decodeResource(getResources(), R.drawable.poop4));
+        poops = new ArrayList<Sprite>();
+        for (int x = 0; x < MaxPoopSprites; x++){
+            poops.add(new Sprite(-1,-1, BitmapFactory.decodeResource(getResources(), R.drawable.poop1_trans)));
+        }
+        //poop = new Sprite(-1,-1, BitmapFactory.decodeResource(getResources(), R.drawable.poop1_trans));
         dude = new Sprite(-1,-1, BitmapFactory.decodeResource(getResources(), R.drawable.robot1));
+
     }
 
     private void initializeStars(int maxX, int maxY) {
@@ -83,6 +105,39 @@ public class GameBoard extends View{
             int y = r.nextInt(maxY-5+1)+5;
             starField.add(new Point (x,y));
         }
+    }
+    private boolean checkForCollision(int id) {
+
+        Sprite p = poops.get(id);
+        Rect r1 = new Rect(p.getX(), p.getY(), p.getX() + p.getWidth(), p.getY() + p.getHeight());
+
+        for(int x = 0; x < MaxPoopSprites; x++){
+
+            Sprite other = poops.get(x);
+
+            if(other.get_id() == id){
+                continue;
+
+            } else {
+
+                Rect r2 = new Rect(other.getX(), other.getY(), other.getX() + other.getWidth(), other.getY() + other.getHeight());
+                Rect r3 = new Rect(r1);
+                if(r1.intersect(r2)){
+                    for (int i = r1.left; i < r1.right; i++) {
+                        for (int j = r1.top; j < r1.bottom; j++) {
+                            if (p.get_bm().getPixel(i - r3.left, j - r3.top) != Color.TRANSPARENT) {
+                                if (other.get_bm().getPixel(i - r2.left, j - r2.top) != Color.TRANSPARENT) {
+                                    p.set_lastCollision(new Point(other.getX() + i - r2.left, other.getY() + j - r2.top));
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     synchronized public void onDraw(Canvas canvas) {
@@ -110,60 +165,100 @@ public class GameBoard extends View{
         if (dude.getX() >= 0) {
             canvas.drawBitmap(dude.get_bm(), dude.getX(), dude.getY(), null);
         }
-        //poop4
-        if(poop.getX() >= 0){
-            Matrix m = poop.get_matrix();
-            m.reset();
-            m.postTranslate(poop.getX(), poop.getY());
-            m.postRotate(poop.getRotation(),
-                    (float) (poop.getX() + poop.getWidth() / 2.0),
-                    (float) (poop.getY() + poop.getHeight() / 2.0));
+        for(Sprite poop : poops) {
+            //poop4
+            if (poop.getX() >= 0) {
+                Matrix m = poop.get_matrix();
+                m.reset();
+                m.postTranslate(poop.getX(), poop.getY());
+                m.postRotate(poop.getRotation(),
+                        (float) (poop.getX() + poop.getWidth() / 2.0),
+                        (float) (poop.getY() + poop.getHeight() / 2.0));
 
-            canvas.drawBitmap(poop.get_bm(), m, null);
-            poop.setRotation(5);
-            if(poop.getRotation() >= 360)
-                poop.setRotation(0);
+                canvas.drawBitmap(poop.get_bm(), m, null);
+                poop.incrementRotation(poop.get_rotationSpeed());
+                if (poop.getRotation() >= 360)
+                    poop.incrementRotation(0);
+            }
+
+
+            boolean collisionDetected = checkForCollision(poop.get_id());
+            if(collisionDetected) {
+                if (poop.get_lastCollision().x > 0 || poop.get_lastCollision().y > 0) {
+                    canvas.drawLine(poop.get_lastCollision().x - 5, poop.get_lastCollision().y - 5,
+                            poop.get_lastCollision().x + 5, poop.get_lastCollision().y + 5, p);
+                    canvas.drawLine(poop.get_lastCollision().x + 5, poop.get_lastCollision().y - 5,
+                            poop.get_lastCollision().x - 5, poop.get_lastCollision().y + 5, p);
+                }
+            }
         }
-        String msg = "x: " + poop.getX() + " y: " + poop.getY();
+
+        /*String msg = "poop x: " + poop.getX() + " y: " + poop.getY();
+        msg += "\ndude x: " + dude.getX() + " y: " + dude.getY();
 
         Paint paint = new Paint();
         paint.setColor(Color.RED);
         paint.setTextSize(30);
-        canvas.drawText(msg, 40,40, paint);
+        canvas.drawText(msg, 40,40, paint);*/
     }
 
     public void frameUpdate() {
 
-            Point dudePoint = dude.getXY();
-            Point poopPoint = poop.getXY();
-            Point curVel = dude.get_velocity();
+            //Point dudePoint = dude.getXY();
+
+        for(Sprite poop: poops){
+            int poopY = poop.getY();
+            int poopX = poop.getX();
+
+            if(poopY > findViewById(R.id.the_canvas).getHeight() + 100){
+
+                poopX = getRandomXLocation();
+                poopY = -200;
+
+            }else{
+
+                poopY += poop.get_velocity().y;
+            }
+
+            poop.setXY(poopX, poopY);
+
+        }
+            //Point poopPoint = poop.getXY();
+            //Point curVel = dude.get_velocity();
 
             //Now calc the new positions.
             //Note if we exceed a boundary the direction of the velocity gets reversed.
-            dudePoint.x = dudePoint.x + curVel.x;
+            //dudePoint.x = dudePoint.x + curVel.x;
            /* if (dudePoint.x > sprite1MaxX || dudePoint.x < 5) {
                 Point newLoc = new Point(curVel.x *= -1,curVel.y);
                 dude.set_velocity(newLoc);
             }*/
-            dudePoint.y = dudePoint.y + curVel.y;
+            //dudePoint.y = dudePoint.y + curVel.y;
            /* if (dudePoint.y > sprite1MaxY || dudePoint.y < 5) {
                 Point newLoc = new Point(curVel.x, curVel.y *= -1);
                 dude.set_velocity(newLoc);
             }*/
 
-            curVel = ((GameBoard)findViewById(R.id.the_canvas)).poop.get_velocity();
+            //curVel = ((GameBoard)findViewById(R.id.the_canvas)).poop.get_velocity();
 
-            poopPoint.x = poopPoint.x + ((GameBoard)findViewById(R.id.the_canvas)).poop.get_velocity().x;
+           /* if(poopPoint.y > findViewById(R.id.the_canvas).getHeight() + 100){
+
+                poopPoint.x = getRandomXLocation();
+                poopPoint.y = -200;
+            }*/
+
+            //poopPoint.x = poopPoint.x + ((GameBoard)findViewById(R.id.the_canvas)).poop.get_velocity().x;
             /*if (poopPoint.x > sprite2MaxX || poopPoint.x < 5) {
                 Point newLoc = new Point(curVel.x *= -1,curVel.y);
                poop.set_velocity(newLoc);
             }*/
-            poopPoint.y = poopPoint.y + ((GameBoard)findViewById(R.id.the_canvas)).poop.get_velocity().y;
+            //poopPoint.y += 5;
+            //poopPoint.y = poopPoint.y + ((GameBoard)findViewById(R.id.the_canvas)).poop.get_velocity().y;
             /*if (poopPoint.y > sprite2MaxY || poopPoint.y < 5) {
                 Point newLoc = new Point(curVel.x, curVel.y *= -1);
                 poop.set_velocity(newLoc);
             }*/
-            dude.setXY(dudePoint.x, dudePoint.y);
-            poop.setXY(poopPoint.x, poopPoint.y);
+            //dude.setXY(dudePoint.x, dudePoint.y);
+            //poop.setXY(poopPoint.x, poopPoint.y);
     }
 }
